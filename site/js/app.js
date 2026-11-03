@@ -51,7 +51,7 @@ function drawPreview() {
     const fig = document.createElement('figure');
     fig.innerHTML = toSVG(placed(paper, { sheet, pageIndex, id: 'preview', name: names[0] || '', digital }));
     const cap = document.createElement('figcaption');
-    cap.textContent = `Page ${pageIndex + 1}: ${PAGES[key].title}`;
+    cap.textContent = `Page ${pageIndex + 1}: ${PAGES[key].title}` + (paper.scale ? ` (${paper.label}, boxes ${Math.round(186 / 8 * paper.scale)} mm wide)` : '');
     fig.append(cap);
     box.append(fig);
   });
