@@ -167,9 +167,13 @@ function toQuadratic(poly) {
 export function traceCell(field, threshold = 0.45) {
   const { w, h, ox, oy } = field;
   const f = blur(field.data, w, h, threshold < 0.3 ? 1.3 : 0.9);
-  // A mark must be clearly darker than the threshold somewhere to count as ink.
-  clean(f, w, h, threshold, threshold * 1.3);
-  const loops = isoLoops(f, w, h, threshold);
+  // Two levels, like hysteresis edge detection: the outline follows a lower
+  // level so thin, light parts of a stroke (pencil loops, an o touching the
+  // dashed line) stay joined up, but a mark only counts as ink if some of it
+  // reaches the full threshold, so smudges and guide leftovers still go.
+  const low = Math.max(0.1, threshold * 0.65);
+  clean(f, w, h, low, threshold * 1.05);
+  const loops = isoLoops(f, w, h, low);
   // pixel -> font units (y up, baseline at 0)
   const toFont = ([x, y]) => [(ox + (x + 0.5) / RES) * UNITS_PER_MM, (CELL.baseline - (oy + (y + 0.5) / RES)) * UNITS_PER_MM];
   const minA = MIN_AREA * UNITS_PER_MM * UNITS_PER_MM;

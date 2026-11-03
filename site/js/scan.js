@@ -1,7 +1,7 @@
 // Finds sheets in a raster, straightens them, reads their QR code and cuts out
 // each box. A raster can hold several sheets (an .ai has its pages side by
 // side), so sheets are found by their four corner markers.
-import { FRAME, MARKER, CELL, PAGES, HINTS, cellRect, decodeTag } from './layout.js';
+import { FRAME, MARKER, CELL, GRID, PAGES, HINTS, cellRect, decodeTag } from './layout.js';
 
 const DETECT_MAX = 1600;           // longest side used for marker detection, px
 export const RES = 10;             // straightened sheet resolution, px per mm
@@ -255,7 +255,7 @@ export function findSheets(r) {
 // The ink of one box, in mm relative to the box, as a darkness field, with
 // the printed guide lines and label taken out. The label strip is included
 // because tall letters reach into it.
-export function cellField(sheet, index, label = '') {
+function rawField(sheet, index) {
   const r = cellRect(index), img = sheet.img;
   const inset = 0.7;
   const x0 = Math.round((r.x + inset - img.x0) * RES), y0 = Math.round((r.y + inset - img.y0) * RES);
@@ -263,9 +263,35 @@ export function cellField(sheet, index, label = '') {
   const w = x1 - x0, h = y1 - y0, data = new Float32Array(w * h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) data[y * w + x] = img.data[(y0 + y) * img.w + x0 + x];
   // Origin of the field in box mm, so tracing can place the baseline.
-  const f = { w, h, data, ox: x0 / RES + img.x0 - r.x, oy: y0 / RES + img.y0 - r.y, rect: r };
-  removeGuides(f, label);
+  return { w, h, data, ox: x0 / RES + img.x0 - r.x, oy: y0 / RES + img.y0 - r.y, rect: r };
+}
+
+export function cellField(sheet, index, label = '') {
+  const f = rawField(sheet, index);
+  removeGuides(f, label, rowGuides(sheet, Math.floor(index / GRID.cols)));
   return f;
+}
+
+// The printed guides are identical in every box of a grid row, so the median
+// of the neighbours' measurements is what a guide really looks like there.
+// A box whose own measurement is much darker has ink lying along the guide
+// (like the crossbar of an H on the dashed line) and uses the median instead.
+function rowGuides(sheet, gridRow) {
+  sheet.guides ??= new Map();
+  if (!sheet.guides.has(gridRow)) {
+    const count = PAGES[sheet.tag.page].chars.length;
+    const per = [];
+    for (let c = 0; c < GRID.cols; c++) {
+      const i = gridRow * GRID.cols + c;
+      if (i < count) per.push(measureGuides(rawField(sheet, i)));
+    }
+    const med = per[0].map((rows, li) => rows.map((_, yi) => {
+      const v = per.map(m => m[li][yi]).sort((a, b) => a - b);
+      return v[Math.floor(v.length / 2)];
+    }));
+    sheet.guides.set(gridRow, med);
+  }
+  return sheet.guides.get(gridRow);
 }
 
 // Pencil is about as dark as the printed guides, so a plain threshold can't
@@ -273,8 +299,8 @@ export function cellField(sheet, index, label = '') {
 // measured row by row (the typical value across the box, which ink barely
 // affects) and divided out. Paper under the line becomes white again, while a
 // stroke crossing it keeps its own darkness.
-function removeGuides(f, label) {
-  const { w, h, data } = f;
+function guideLines(f) {
+  const { w } = f;
   const row = mm => Math.round((mm - f.oy) * RES);
   const right = f.rect.w - f.ox - w / RES; // inset on the right, mm
   const lines = [
@@ -286,23 +312,45 @@ function removeGuides(f, label) {
     { y: CELL.band, x0: 0, x1: w }, // edge of the shaded strip
   ];
   const search = Math.round(1.2 * RES);
-  for (const L of lines) {
-    const x0 = Math.max(0, L.x0), x1 = Math.min(w, L.x1);
-    if (x1 - x0 < 3) continue;
-    const ye = row(L.y);
-    for (let y = Math.max(0, ye - search); y <= Math.min(h - 1, ye + search); y++) {
+  return lines.map(L => ({ ...L, x0: Math.max(0, L.x0), x1: Math.min(w, L.x1), ya: row(L.y) - search, yb: row(L.y) + search }));
+}
+
+// For each guide, its darkness in every pixel row near it (null outside the box).
+function measureGuides(f) {
+  const { w, h, data } = f;
+  return guideLines(f).map(L => {
+    const out = [];
+    for (let y = L.ya; y <= L.yb; y++) {
+      if (y < 0 || y >= h || L.x1 - L.x0 < 3) { out.push(0); continue; }
       const vals = [];
-      for (let x = x0; x < x1; x++) vals.push(data[y * w + x]);
+      for (let x = L.x0; x < L.x1; x++) vals.push(data[y * w + x]);
       vals.sort((a, b) => a - b);
       // Half of a dashed line is gaps, so look higher up the range for it.
-      const line = vals[Math.floor(vals.length * (L.dashed ? 0.7 : 0.5))];
+      out.push(vals[Math.floor(vals.length * (L.dashed ? 0.7 : 0.5))]);
+    }
+    return out;
+  });
+}
+
+function removeGuides(f, label, rowMedian) {
+  const { w, h, data } = f;
+  const row = mm => Math.round((mm - f.oy) * RES);
+  const own = measureGuides(f);
+  guideLines(f).forEach((L, li) => {
+    const x0 = L.x0, x1 = L.x1;
+    if (x1 - x0 < 3) return;
+    for (let y = Math.max(0, L.ya); y <= Math.min(h - 1, L.yb); y++) {
+      const yi = y - L.ya;
+      let line = own[li][yi];
+      const ref = rowMedian ? rowMedian[li][yi] : line;
+      if (line > ref * 1.5 + 0.05) line = ref;
       if (line < 0.03) continue;
       for (let x = x0; x < x1; x++) {
         const i = y * w + x;
         data[i] = Math.max(0, 1 - (1 - data[i]) / (1 - line));
       }
     }
-  }
+  });
   // Label (and its hint word) in the top-left of the strip. Its width is an
   // overestimate from the character count, which is plenty: letters rarely reach there.
   const labelW = 1.4 + 2.6 + (label.length > 1 ? 1 + 1.15 * (label.length - 2) : 0) + 0.6;
