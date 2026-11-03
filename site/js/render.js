@@ -1,5 +1,6 @@
 // Renders sheet display lists to a PDF file or to SVG for the on-page preview.
-// Each page is { paper: {w, h}, ox, oy, items } with ox/oy the frame offset in mm.
+// Each page is { paper: {w, h}, s, ox, oy, items }: a frame point (x, y) lands at
+// (x * s + ox, y * s + oy) mm on the paper. s is 1 except on A3.
 
 const PT = 72 / 25.4;
 const num = v => (Math.round(v * 100) / 100).toString();
@@ -19,18 +20,18 @@ function pathOps(cmds, P) {
   return out;
 }
 
-function pageContent({ paper, ox, oy, items }) {
-  const X = x => num((x + ox) * PT), Y = y => num((paper.h - (y + oy)) * PT);
+function pageContent({ paper, s: k = 1, ox, oy, items }) {
+  const X = x => num((x * k + ox) * PT), Y = y => num((paper.h - (y * k + oy)) * PT), L = v => num(v * k * PT);
   const P = (x, y) => `${X(x)} ${Y(y)}`;
   let s = '';
   for (const it of items) {
     if (it.t === 'rect') {
-      s += `${num(it.fill)} g ${X(it.x)} ${Y(it.y + it.h)} ${num(it.w * PT)} ${num(it.h * PT)} re f\n`;
+      s += `${num(it.fill)} g ${X(it.x)} ${Y(it.y + it.h)} ${L(it.w)} ${L(it.h)} re f\n`;
     } else if (it.t === 'box') {
-      s += `${num(it.stroke)} G ${num(it.lw * PT)} w [] 0 d ${X(it.x)} ${Y(it.y + it.h)} ${num(it.w * PT)} ${num(it.h * PT)} re S\n`;
+      s += `${num(it.stroke)} G ${L(it.lw)} w [] 0 d ${X(it.x)} ${Y(it.y + it.h)} ${L(it.w)} ${L(it.h)} re S\n`;
     } else if (it.t === 'line') {
-      const dash = it.dash ? `[${it.dash.map(d => num(d * PT)).join(' ')}] 0 d` : '[] 0 d';
-      s += `${num(it.stroke)} G ${num(it.lw * PT)} w ${dash} ${P(it.x1, it.y1)} m ${P(it.x2, it.y2)} l S\n`;
+      const dash = it.dash ? `[${it.dash.map(L).join(' ')}] 0 d` : '[] 0 d';
+      s += `${num(it.stroke)} G ${L(it.lw)} w ${dash} ${P(it.x1, it.y1)} m ${P(it.x2, it.y2)} l S\n`;
     } else if (it.t === 'path') {
       s += `${num(it.fill)} g\n${pathOps(it.cmds, P)}f\n`;
     }
@@ -89,8 +90,8 @@ export async function toPDF(pages, { title = 'Handwriting font sheet' } = {}) {
 // A page's optional `draw` items go in the Draw here layer (used for test files).
 export const AI_GAP = 20;
 
-function aiPage({ paper, ox, oy, items }, dx, H) {
-  const X = x => num((x + ox + dx) * PT), Y = y => num((H - (y + oy)) * PT);
+function aiPage({ paper, s: k = 1, ox, oy, items }, dx, H) {
+  const X = x => num((x * k + ox + dx) * PT), Y = y => num((H - (y * k + oy)) * PT), L = v => num(v * k * PT);
   const P = (x, y) => `${X(x)} ${Y(y)}`;
   let s = '';
   const rect = (x, y, w, h) => `${P(x, y)} m\n${P(x + w, y)} L\n${P(x + w, y + h)} L\n${P(x, y + h)} L\n${P(x, y)} L\n`;
@@ -98,10 +99,10 @@ function aiPage({ paper, ox, oy, items }, dx, H) {
     if (it.t === 'rect') {
       s += `${num(it.fill)} g\n${rect(it.x, it.y, it.w, it.h)}f\n`;
     } else if (it.t === 'box') {
-      s += `${num(it.stroke)} G ${num(it.lw * PT)} w []0 d\n${rect(it.x, it.y, it.w, it.h)}s\n`;
+      s += `${num(it.stroke)} G ${L(it.lw)} w []0 d\n${rect(it.x, it.y, it.w, it.h)}s\n`;
     } else if (it.t === 'line') {
-      const dash = it.dash ? `[${it.dash.map(d => num(d * PT)).join(' ')}]0 d` : '[]0 d';
-      s += `${num(it.stroke)} G ${num(it.lw * PT)} w ${dash}\n${P(it.x1, it.y1)} m\n${P(it.x2, it.y2)} L\nS\n`;
+      const dash = it.dash ? `[${it.dash.map(L).join(' ')}]0 d` : '[]0 d';
+      s += `${num(it.stroke)} G ${L(it.lw)} w ${dash}\n${P(it.x1, it.y1)} m\n${P(it.x2, it.y2)} L\nS\n`;
     } else if (it.t === 'path') {
       // One compound path per item, each sub-path closed and filled. Illustrator
       // drops the last point of a closed sub-path, assuming it repeats the
@@ -179,8 +180,8 @@ ${pages.map((p, i) => p.draw ? aiPage({ ...p, items: p.draw }, offsets[i], H) : 
 
 const hex = g => { const v = Math.round(g * 255).toString(16).padStart(2, '0'); return `#${v}${v}${v}`; };
 
-export function toSVG({ paper, ox, oy, items }) {
-  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${paper.w} ${paper.h}"><rect width="${paper.w}" height="${paper.h}" fill="#fff"/><g transform="translate(${ox} ${oy})">`;
+export function toSVG({ paper, s: k = 1, ox, oy, items }) {
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${paper.w} ${paper.h}"><rect width="${paper.w}" height="${paper.h}" fill="#fff"/><g transform="translate(${num(ox)} ${num(oy)}) scale(${k})">`;
   for (const it of items) {
     if (it.t === 'rect') s += `<rect x="${num(it.x)}" y="${num(it.y)}" width="${num(it.w)}" height="${num(it.h)}" fill="${hex(it.fill)}"/>`;
     else if (it.t === 'box') s += `<rect x="${num(it.x)}" y="${num(it.y)}" width="${num(it.w)}" height="${num(it.h)}" fill="none" stroke="${hex(it.stroke)}" stroke-width="${it.lw}"/>`;

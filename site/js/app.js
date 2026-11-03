@@ -28,7 +28,8 @@ function settings() {
 }
 
 function placed(paper, spec) {
-  return { paper, ox: (paper.w - FRAME.w) / 2, oy: (paper.h - FRAME.h) / 2, items: buildPage(ts, spec) };
+  const s = paper.scale || 1;
+  return { paper, s, ox: (paper.w - FRAME.w * s) / 2, oy: (paper.h - FRAME.h * s) / 2, items: buildPage(ts, spec) };
 }
 
 function updateForm() {
@@ -66,7 +67,7 @@ async function makeFile(kind) {
 
 function fileName(ext = 'pdf') {
   const { sheet, names } = settings();
-  const who = names.length === 1 ? '-' + names[0].replace(/[^A-Za-z0-9]+/g, '') : names.length > 1 ? '-class' : '';
+  const who = names.length === 1 ? '-' + names[0].normalize('NFD').replace(/[^A-Za-z0-9]+/g, '') : names.length > 1 ? '-class' : '';
   return `handwriting-sheet-${sheet}${who}.${ext}`;
 }
 

@@ -6,7 +6,7 @@ Everything runs in the browser. Nothing is uploaded, so the site is plain static
 
 ## Status
 
-- Sheet generator: done. Quick (1 page), Standard (2 pages) and Complete (3 pages) sheets, A4 or US Letter, optional class list with one named sheet per person.
+- Sheet generator: done. Quick (1 page), Standard (2 pages) and Complete (3 pages) sheets, A4, US Letter or A3 (the A4 sheet scaled up 1.41x, so the scanner needs no changes), optional class list with one named sheet per person.
 - Digital mode: downloads an Illustrator .ai (locked Sheet layer, empty Draw here layer, pages side by side) or a PDF for Procreate and other apps.
 - Scanning and font building: done. Takes scans, phone photos, PDFs and Illustrator-saved .ai files (several at once, grouped per person by the QR id), traces every box and writes a .ttf (zip for a class). Works with pen or pencil: guide lines are divided out by their measured darkness and the ink threshold adapts to each sheet. Accented letters are built from the drawn hyphen, apostrophe and full stop; Complete sheets alternate first and second versions through a GSUB calt feature.
 

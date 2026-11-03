@@ -3,7 +3,7 @@
   :root { --bg: #111; --fg: #eee; --muted: #999; --line: #444; accent-color: #eee; color-scheme: dark; }
 }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
-main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 32px; }
 h1 { font-size: 1.6em; margin: 0 0 6px; }
 h2 { font-size: 1.15em; margin: 36px 0 12px; }
 p { margin: 0 0 10px; }
@@ -43,3 +43,8 @@ h3 { font-size: 1em; margin: 0 0 6px; }
 button.link { background: none; border: 0; padding: 0; color: inherit; font-size: inherit; text-decoration: underline; cursor: pointer; }
 .pair { display: flex; gap: 8px; align-items: center; }
 .pair input[type=number] { width: 5em; }
+a { color: inherit; }
+.byline { margin: 0 0 14px; }
+footer { width: min(728px, calc(100% - 32px)); margin: 0 auto; padding: 20px 0 40px; border-top: 1px solid var(--line); font-size: .9em; }
+footer p { margin: 0 0 6px; }
+footer .links { display: flex; flex-wrap: wrap; gap: 4px 18px; }

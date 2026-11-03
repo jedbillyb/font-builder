@@ -4,13 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Handwriting Font Maker</title>
-<meta name="description" content="Turn your handwriting into a font. Print a sheet, fill it in, scan it.">
+<meta name="description" content="Turn your handwriting into a font. Print a sheet, fill it in, scan it. Free, and nothing leaves your browser.">
+<meta name="author" content="Jed Blenkhorn">
+<meta property="og:title" content="Handwriting Font Maker">
+<meta property="og:description" content="Turn your handwriting into a font. Print a sheet, fill it in, scan it.">
+<meta property="og:url" content="https://font.jedbillyb.com/">
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main>
   <h1>Handwriting Font Maker</h1>
+  <p class="byline muted">by <a href="https://jedbillyb.com/">Jed Blenkhorn</a></p>
   <p>Turn your handwriting into a font you can install and type with. Print a sheet, fill it in with a pen or pencil, then scan it or take a photo.</p>
 
   <h2>1. Get a sheet</h2>
@@ -32,6 +37,7 @@
       <select id="paper">
         <option value="a4">A4</option>
         <option value="letter">US Letter</option>
+        <option value="a3">A3 (bigger boxes)</option>
       </select>
     </label>
     <label id="copiesField">Copies
@@ -83,7 +89,19 @@
     <p class="row" id="zipRow" hidden><button id="zip">Download all fonts (.zip)</button></p>
   </div>
   <div id="fonts"></div>
+
+  <h2>About</h2>
+  <p><b>Is it free?</b> Yes. No account, no watermark, and the fonts are yours to use however you like.</p>
+  <p><b>Where do my sheets go?</b> Nowhere. Reading the sheets and building the font all happen in your browser, so your handwriting never leaves your device.</p>
+  <p><b>Using it with a class?</b> Paste the class list into Names, print the pile, and scan them all back in as one PDF. Everyone gets their own font, and you can download them together as a zip.</p>
+  <p><b>Something not working?</b> Email <a href="mailto:hello@jedbillyb.com">hello@jedbillyb.com</a> with the photo or scan that failed and I'll take a look.</p>
 </main>
+
+<footer>
+  <p>Made by <a href="https://jedbillyb.com/">Jed Blenkhorn</a> in Aotearoa New Zealand.</p>
+  <p class="links"><a href="https://jedbillyb.com/">jedbillyb.com</a> <a href="https://github.com/jedbillyb">GitHub</a> <a href="mailto:hello@jedbillyb.com">Email</a> <a href="https://buymeacoffee.com/jedbillyb">Buy me a coffee</a></p>
+  <p class="muted">Sheet text is set in Arimo (SIL Open Font License). Uses pdf.js, opentype.js, jsQR and qrcode-generator (<a href="vendor/LICENSES.txt">licences</a>).</p>
+</footer>
 
 <script src="vendor/opentype.min.js"></script>
 <script src="vendor/qrcode.js"></script>

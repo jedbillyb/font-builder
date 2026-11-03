@@ -8,6 +8,9 @@ export const VERSION = 'FB2'; // FB1 was the 7 x 10 grid, never released
 export const PAPER = {
   a4: { w: 210, h: 297, label: 'A4' },
   letter: { w: 215.9, h: 279.4, label: 'US Letter' },
+  // A3 is the A4 sheet scaled up by the A-series ratio, so the boxes are 1.41x
+  // bigger and the scanner, which only looks at the corner squares, is unchanged.
+  a3: { w: 297, h: 420, label: 'A3', scale: Math.SQRT2 },
 };
 
 export const FRAME = { w: 186, h: 255 };

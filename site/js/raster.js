@@ -41,10 +41,11 @@ async function* fromImage(file) {
 // never has to sit in memory at once.
 async function* fromPDF(file) {
   const data = new Uint8Array(await file.arrayBuffer());
+  // pdf.js hands the buffer to its worker, which detaches it, so read the header first.
+  const head = new TextDecoder().decode(data.subarray(0, 20));
   let doc;
   try { doc = await pdfjsLib.getDocument({ data, isEvalSupported: false }).promise; }
   catch {
-    const head = new TextDecoder().decode(data.subarray(0, 20));
     if (head.startsWith('%!PS')) throw new Error(`${file.name} is the blank sheet straight from this site. Draw on it in Illustrator and save it first, so it has a PDF part.`);
     throw new Error(`${file.name} couldn't be read. If it's an Illustrator file, save it again with Create PDF Compatible File ticked.`);
   }
