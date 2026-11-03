@@ -45,6 +45,6 @@ button.link { background: none; border: 0; padding: 0; color: inherit; font-size
 .pair input[type=number] { width: 5em; }
 a { color: inherit; }
 .byline { margin: 0 0 14px; }
-footer { width: min(728px, calc(100% - 32px)); margin: 0 auto; padding: 20px 0 40px; border-top: 1px solid var(--line); font-size: .9em; }
+footer { width: min(760px, calc(100% - 32px)); margin: 0 auto; padding: 20px 0 40px; border-top: 1px solid var(--line); font-size: .9em; }
 footer p { margin: 0 0 6px; }
 footer .links { display: flex; flex-wrap: wrap; gap: 4px 18px; }
