@@ -34,4 +34,8 @@ jsQR often misses the code on a whole page, but reads it every time once the QR 
 
     cd site && python -m http.server 8765
 
+## Deploy
+
+`./deploy.sh` rsyncs `site/` to `/var/www/font` on the OCI box. nginx serves it as font.jedbillyb.com (vhost `/etc/nginx/sites-available/font`, Let's Encrypt cert via certbot), with Cloudflare proxying in front. Cloudflare caches the JS and CSS, so purge the cache after a deploy if a change doesn't show up.
+
 Third-party files are listed in `site/vendor/LICENSES.txt`.
