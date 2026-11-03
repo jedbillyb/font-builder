@@ -1,0 +1,7 @@
+Third-party files in this folder and ../fonts
+
+opentype.min.js  opentype.js 1.3.4, MIT License, Copyright (c) 2020 Frederik De Bleser
+qrcode.js        qrcode-generator 1.4.4, MIT License, Copyright (c) 2009 Kazuhiko Arase
+jsQR.js          jsQR 1.4.0, Apache License 2.0, Copyright Cosmo Wolfe
+../fonts/arimo-* Arimo (via @fontsource/arimo), SIL Open Font License 1.1, Copyright 2020 The Arimo Project Authors
+pdf.min.js, pdf.worker.min.js  pdf.js 3.11.174 (pdfjs-dist), Apache License 2.0, Copyright Mozilla Foundation

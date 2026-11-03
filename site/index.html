@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handwriting Font Maker</title>
+<meta name="description" content="Turn your handwriting into a font. Print a sheet, fill it in, scan it.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Handwriting Font Maker</h1>
+  <p>Turn your handwriting into a font you can install and type with. Print a sheet, fill it in with a pen or pencil, then scan it or take a photo.</p>
+
+  <h2>1. Get a sheet</h2>
+  <fieldset>
+    <legend>Sheet</legend>
+    <label class="choice"><input type="radio" name="sheet" value="quick" checked> <b>Quick</b>, 1 page. Letters, numbers and basic punctuation. About 15 minutes.</label>
+    <label class="choice"><input type="radio" name="sheet" value="standard"> <b>Standard</b>, 2 pages. Adds every symbol on a keyboard and a few more.</label>
+    <label class="choice"><input type="radio" name="sheet" value="complete"> <b>Complete</b>, 3 pages. Adds a second version of every letter and number, so repeated letters don't look identical.</label>
+  </fieldset>
+
+  <fieldset>
+    <legend>How will you fill it in?</legend>
+    <label class="choice"><input type="radio" name="mode" value="print" checked> <b>Print it</b> and write with a pen or pencil.</label>
+    <label class="choice"><input type="radio" name="mode" value="digital"> <b>Draw on a computer or tablet</b>, in Illustrator with a Wacom or mouse, or in an app like Procreate.</label>
+  </fieldset>
+
+  <div class="fields">
+    <label>Paper
+      <select id="paper">
+        <option value="a4">A4</option>
+        <option value="letter">US Letter</option>
+      </select>
+    </label>
+    <label id="copiesField">Copies
+      <input id="copies" type="number" min="1" max="60" value="1">
+    </label>
+  </div>
+
+  <div id="printOnly">
+    <label class="block">Names (optional)
+      <textarea id="names" rows="4" placeholder="One name per line"></textarea>
+    </label>
+    <p class="muted">For a class, paste in a list of names. Each person gets their own sheet with their name printed on it, and the whole pile can be scanned in one go.</p>
+  </div>
+  <div id="digitalOnly" hidden>
+    <label class="block">Your name (optional)
+      <input id="name" type="text" maxlength="40">
+    </label>
+  </div>
+
+  <p class="row">
+    <button id="downloadAi" disabled hidden>Download .ai for Illustrator</button>
+    <button id="download" disabled>Download PDF</button>
+    <button id="open" disabled>Open PDF to print</button>
+    <span id="note" class="muted">Loading...</span>
+  </p>
+  <p class="muted" id="printHelp">Print in black and white. Any dark pen or pencil works. Felt pen gives the cleanest result; with pencil, press firmly and rub out mistakes properly.</p>
+  <div id="digitalHelp" class="muted" hidden>
+    <p><b>Illustrator:</b> open the .ai. All the pages are side by side on one artboard, the sheet is on a locked layer, and there's an empty "Draw here" layer on top. Draw each character in black with the Paintbrush, Blob Brush or Pencil. Then save it as an .ai (Illustrator adds "[Converted]" to the name, that's fine) with Create PDF Compatible File ticked, which is on by default.</p>
+    <p><b>Procreate and other apps:</b> import the PDF, draw on a new layer in black, then export the whole page as a PDF or PNG.</p>
+  </div>
+
+  <div id="preview" class="preview" aria-label="Sheet preview"></div>
+
+  <h2>2. Make your font</h2>
+  <p>Upload your filled-in sheets: scans, phone photos, PDFs, or the .ai file you drew on. You can add several at once, like both pages of a Standard sheet or a whole class. Nothing is uploaded anywhere, it all happens on this page.</p>
+  <div id="drop" class="drop" tabindex="0" role="button" aria-label="Choose sheet files">
+    Drop files here, or click to choose them
+    <input id="files" type="file" multiple accept="image/*,.pdf,.ai,application/pdf" hidden>
+  </div>
+  <p class="status muted"><span id="scanStatus" aria-live="polite"></span> <button id="reset" class="link" hidden>Clear all sheets</button></p>
+  <div id="problems" class="problems"></div>
+  <div id="fontSettings" hidden>
+    <div class="fields">
+      <label>Letter spacing<span class="pair"><input id="sb" type="range" min="-200" max="400" step="5" value="45"><input id="sbn" type="number" min="-500" max="1000" step="5" value="45" aria-label="Letter spacing"></span></label>
+      <label>Word spacing<span class="pair"><input id="ws" type="range" min="0" max="1500" step="10" value="300"><input id="wsn" type="number" min="0" max="2000" step="10" value="300" aria-label="Word spacing"></span></label>
+      <label>Version<input id="version" type="text" value="1.0" inputmode="decimal"></label>
+    </div>
+    <p class="muted"><button id="resetSpacing" class="link">Reset spacing to default</button></p>
+    <p class="row" id="zipRow" hidden><button id="zip">Download all fonts (.zip)</button></p>
+  </div>
+  <div id="fonts"></div>
+</main>
+
+<script src="vendor/opentype.min.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="vendor/jsQR.js"></script>
+<script src="vendor/pdf.min.js"></script>
+<script type="module" src="js/app.js"></script>
+<script type="module" src="js/make.js"></script>
+</body>
+</html>
