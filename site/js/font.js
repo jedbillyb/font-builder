@@ -96,6 +96,40 @@ function compose(glyphs) {
   return out;
 }
 
+// ---------- punctuation placement ----------
+
+// Small marks have no guide line to aim at, so they often land too high or
+// too low. Each is moved up or down (never resized) to where type puts it.
+const ON_BASELINE = new Set([...'.:!?…']);
+const AT_CAP = new Set([...'\'"`^°*']);
+const ON_MIDDLE = new Set([...'-~=+×÷•']);
+const PLACED = new Set([...ON_BASELINE, ...AT_CAP, ...ON_MIDDLE, ',', '_']);
+
+export function placeMarks(glyphs) {
+  const top = ks => median(ks.filter(k => glyphs.has(k)).map(k => bbox(glyphs.get(k).contours).y1));
+  const xh = top([...'xzvwunm']) ?? 450;
+  const cap = top([...'HIEFTLKNMXZ']) ?? CAP;
+  const out = new Map();
+  const shift = (g, dy) => { const c = mapPts(g.contours, (x, y) => [x, y + dy]); return { ...g, contours: c, bounds: bbox(c) }; };
+  // Full stops first: a comma's head sits as high as the full stop.
+  let dotH = 90;
+  const stop = glyphs.get('.');
+  if (stop) { const b = bbox(stop.contours); dotH = b.h; }
+  for (const [key, g] of glyphs) {
+    const ch = key.replace(/\.alt$/, '');
+    if (!PLACED.has(ch) || !g.contours.length) { out.set(key, g); continue; }
+    const b = bbox(g.contours);
+    let dy = 0;
+    if (ON_BASELINE.has(ch)) dy = -b.y0;
+    else if (AT_CAP.has(ch)) dy = cap - b.y1;
+    else if (ON_MIDDLE.has(ch)) dy = xh / 2 - b.cy;
+    else if (ch === ',') dy = Math.max(dotH, b.h * 0.35) - b.y1;
+    else if (ch === '_') dy = -100 - b.y1;
+    out.set(key, dy ? shift(g, Math.round(dy)) : g);
+  }
+  return out;
+}
+
 // ---------- GSUB: alternate between first and second versions ----------
 
 // Every glyph that has a second version switches to it when the glyph before
@@ -132,8 +166,8 @@ export function buildTTF(drawn, opts = {}) {
   const sb = opts.sideBearing ?? 45;
   const space = opts.wordSpace ?? 300;
 
-  const glyphs = new Map(drawn);
-  for (const [k, v] of compose(drawn)) glyphs.set(k, v);
+  const glyphs = opts.placeMarks === false ? new Map(drawn) : placeMarks(drawn);
+  for (const [k, v] of compose(glyphs)) glyphs.set(k, v);
 
   const list = [
     { name: '.notdef', contours: [[{ x: 50, y: 0, on: true }, { x: 50, y: 700, on: true }, { x: 450, y: 700, on: true }, { x: 450, y: 0, on: true }], [{ x: 100, y: 50, on: true }, { x: 400, y: 50, on: true }, { x: 400, y: 650, on: true }, { x: 100, y: 650, on: true }]], advance: 500 },
