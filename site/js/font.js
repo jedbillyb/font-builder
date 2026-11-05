@@ -105,6 +105,50 @@ const AT_CAP = new Set([...'\'"`^°*']);
 const ON_MIDDLE = new Set([...'-~=+×÷•']);
 const PLACED = new Set([...ON_BASELINE, ...AT_CAP, ...ON_MIDDLE, ',', '_']);
 
+// Letters and digits that never hang below the line. f, J, Q and digits can
+// go either way depending on the writer, so they are judged by how far below
+// the line they reach.
+const SITS = new Set([...'ABCDEFGHIKLMNOPRSTUVWXYZabcdehiklmnorstuvwxz']);
+const HANGS = new Set([...'gjpqy']);
+const EITHER = new Set([...'fJQ0123456789']);
+
+// A dot drawn clearly above the rest (the dot on a j) is left out when
+// finding the top of a letter's body.
+function bodyTop(contours) {
+  if (contours.length < 2) return bbox(contours).y1;
+  const parts = contours.map(c => bbox([c])).sort((a, b) => b.y1 - a.y1);
+  const rest = Math.max(...parts.slice(1).map(b => b.y1));
+  return parts[0].y0 > rest ? rest : parts[0].y1;
+}
+
+// Moves letters up or down (never resizes them) so every one sits on the
+// baseline, and hanging letters line their tops up with the x-height instead.
+export function placeLetters(glyphs) {
+  const shift = (g, dy) => { const c = mapPts(g.contours, (x, y) => [x, y + dy]); return { ...g, contours: c, bounds: bbox(c) }; };
+  const out = new Map(glyphs);
+  const lowerTops = [];
+  const heights = [...'xzvwunm'].filter(k => glyphs.has(k)).map(k => bbox(glyphs.get(k).contours).h);
+  const deep = -0.3 * (median(heights) ?? 430); // reaching lower than this counts as hanging
+  const sitting = (ch, b) => SITS.has(ch) || (EITHER.has(ch) && b.y0 > deep);
+  for (const [key, g] of glyphs) {
+    const ch = key.replace(/\.alt$/, '');
+    if (!g.contours.length) continue;
+    const b = bbox(g.contours);
+    if (!sitting(ch, b)) continue;
+    const moved = shift(g, -b.y0);
+    out.set(key, moved);
+    if ('xzvwunm'.includes(ch)) lowerTops.push(moved.bounds.y1);
+  }
+  const xh = median(lowerTops);
+  if (xh == null) return out;
+  for (const [key, g] of glyphs) {
+    const ch = key.replace(/\.alt$/, '');
+    if (!HANGS.has(ch) || !g.contours.length) continue;
+    out.set(key, shift(g, Math.round(xh - bodyTop(g.contours))));
+  }
+  return out;
+}
+
 export function placeMarks(glyphs) {
   const top = ks => median(ks.filter(k => glyphs.has(k)).map(k => bbox(glyphs.get(k).contours).y1));
   const xh = top([...'xzvwunm']) ?? 450;
@@ -166,7 +210,9 @@ export function buildTTF(drawn, opts = {}) {
   const sb = opts.sideBearing ?? 45;
   const space = opts.wordSpace ?? 300;
 
-  const glyphs = opts.placeMarks === false ? new Map(drawn) : placeMarks(drawn);
+  let glyphs = new Map(drawn);
+  if (opts.placeLetters !== false) glyphs = placeLetters(glyphs);
+  if (opts.placeMarks !== false) glyphs = placeMarks(glyphs);
   for (const [k, v] of compose(glyphs)) glyphs.set(k, v);
 
   const list = [

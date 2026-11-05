@@ -105,7 +105,7 @@ function fileName(p) {
 async function rebuild(p) {
   p.error = '';
   if (!p.glyphs.size) { p.ttf = null; render(p); return; }
-  const res = buildTTF(p.glyphs, { family: p.family, version: $('version').value, sideBearing: spacing('sb'), wordSpace: spacing('ws'), placeMarks: $('placeMarks').checked });
+  const res = buildTTF(p.glyphs, { family: p.family, version: $('version').value, sideBearing: spacing('sb'), wordSpace: spacing('ws'), placeMarks: $('placeMarks').checked, placeLetters: $('placeLetters').checked });
   p.ttf = res.bytes; p.derived = res.derived;
   try {
     const face = new FontFace(`HF${faceCount++}`, res.bytes.buffer.slice(0));
@@ -225,5 +225,5 @@ $('resetSpacing').addEventListener('click', () => {
   clearTimeout(timer); rebuildAll();
 });
 const spacing = id => { const b = $(id + 'n'); return Math.min(+b.max, Math.max(+b.min, +b.value || 0)); };
-$('placeMarks').addEventListener('change', () => { clearTimeout(timer); rebuildAll(); });
+for (const id of ['placeMarks', 'placeLetters']) $(id).addEventListener('change', () => { clearTimeout(timer); rebuildAll(); });
 $('version').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(rebuildAll, 300); });

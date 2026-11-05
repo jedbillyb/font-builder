@@ -332,6 +332,8 @@ function measureGuides(f) {
   });
 }
 
+const SHIFT = Math.round(0.4 * RES); // how far a guide may sit from its neighbours', in pixel rows
+
 function removeGuides(f, label, rowMedian) {
   const { w, h, data } = f;
   const row = mm => Math.round((mm - f.oy) * RES);
@@ -342,8 +344,15 @@ function removeGuides(f, label, rowMedian) {
     for (let y = Math.max(0, L.ya); y <= Math.min(h - 1, L.yb); y++) {
       const yi = y - L.ya;
       let line = own[li][yi];
-      const ref = rowMedian ? rowMedian[li][yi] : line;
-      if (line > ref * 1.5 + 0.05) line = ref;
+      // The page can bend a little, so a guide may sit a few pixel rows off
+      // its neighbours'. Compare against the darkest neighbour value nearby,
+      // or a shifted line counts as ink and stays in the letter.
+      if (rowMedian) {
+        const m = rowMedian[li];
+        let ref = 0;
+        for (let d = -SHIFT; d <= SHIFT; d++) ref = Math.max(ref, m[yi + d] ?? 0);
+        if (line > ref * 1.5 + 0.05) line = ref;
+      }
       if (line < 0.03) continue;
       for (let x = x0; x < x1; x++) {
         const i = y * w + x;
