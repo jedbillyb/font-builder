@@ -114,11 +114,15 @@ const EITHER = new Set([...'fJQ0123456789']);
 
 // A dot drawn clearly above the rest (the dot on a j) is left out when
 // finding the top of a letter's body.
+// Only a small mark counts as a dot, so a q written as a bowl plus a
+// separate tail still lines up by its bowl.
 function bodyTop(contours) {
   if (contours.length < 2) return bbox(contours).y1;
   const parts = contours.map(c => bbox([c])).sort((a, b) => b.y1 - a.y1);
-  const rest = Math.max(...parts.slice(1).map(b => b.y1));
-  return parts[0].y0 > rest ? rest : parts[0].y1;
+  const rest = parts.slice(1), restTop = Math.max(...rest.map(b => b.y1));
+  const restH = Math.max(...rest.map(b => b.y1)) - Math.min(...rest.map(b => b.y0));
+  const dot = parts[0].y0 > restTop && parts[0].h < restH * 0.3;
+  return dot ? restTop : parts[0].y1;
 }
 
 // Moves letters up or down (never resizes them) so every one sits on the
@@ -144,7 +148,7 @@ export function placeLetters(glyphs) {
   for (const [key, g] of glyphs) {
     const ch = key.replace(/\.alt$/, '');
     if (!HANGS.has(ch) || !g.contours.length) continue;
-    out.set(key, shift(g, Math.round(xh - bodyTop(g.contours))));
+    out.set(key, shift(g, Math.round(xh - (ch === 'j' ? bodyTop(g.contours) : bbox(g.contours).y1))));
   }
   return out;
 }

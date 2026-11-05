@@ -171,7 +171,7 @@ export function traceCell(field, threshold = 0.45) {
   // level so thin, light parts of a stroke (pencil loops, an o touching the
   // dashed line) stay joined up, but a mark only counts as ink if some of it
   // reaches the full threshold, so smudges and guide leftovers still go.
-  const low = Math.max(0.1, threshold * 0.65);
+  const low = Math.max(0.06, threshold * 0.5);
   clean(f, w, h, low, threshold * 1.05);
   const loops = isoLoops(f, w, h, low);
   // pixel -> font units (y up, baseline at 0)

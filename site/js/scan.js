@@ -334,6 +334,77 @@ function measureGuides(f) {
 
 const SHIFT = Math.round(0.4 * RES); // how far a guide may sit from its neighbours', in pixel rows
 
+// Ink as dark as the printed line can't be told from it, so taking the line
+// out also cuts every stroke that crosses it (the tail of a y, the stem of an
+// h). Each cut is joined back up from the ink just above and just below the
+// line, pairing points on opposite sides so slanted strokes rejoin too. Only
+// pixels that were dark to begin with are filled, so nothing is added where
+// the paper under the line is blank.
+function bridge(f, before, used, x0, x1) {
+  const { w, h, data } = f;
+  const peak = Math.max(0, ...used.map(u => u[1]));
+  if (peak < 0.08) return;
+  const band = used.filter(u => u[1] >= Math.max(0.08, peak * 0.3)).map(u => u[0]);
+  const top = Math.min(...band) - 1, bot = Math.max(...band) + 1;
+  if (top < 0 || bot >= h) return;
+  const k = bot - top; // a 45° stroke moves this far sideways crossing the line
+  const fill = new Float32Array(x1 - x0);
+  for (let x = x0; x < x1; x++) {
+    let best = 0;
+    for (let d = -k; d <= k; d++) {
+      const xa = x - d, xb = x + d;
+      if (xa < x0 || xb < x0 || xa >= x1 || xb >= x1) continue;
+      best = Math.max(best, Math.min(data[top * w + xa], data[bot * w + xb]));
+    }
+    fill[x - x0] = best;
+  }
+  for (let y = top + 1; y < bot; y++) for (let x = x0; x < x1; x++) {
+    const i = y * w + x, v = fill[x - x0];
+    if (v > data[i] && before[i] >= v * 0.8) data[i] = v;
+  }
+}
+
+// The dashed line is 1 mm on, 1 mm off from the box's left edge. Which
+// columns are dash is found from the line itself (the phase that best fits
+// its darkness), so a slightly stretched scan still lines up. Returns a mask
+// with a pixel of margin either side of each dash.
+const DASH = 2 * RES;
+function dashColumns(f, L, rows) {
+  const { w, data } = f;
+  let yi = 0;
+  rows.forEach((v, i) => { if (v > rows[yi]) yi = i; });
+  const ys = [L.ya + yi - 1, L.ya + yi, L.ya + yi + 1].filter(y => y >= 0 && y < f.h);
+  const prof = new Float32Array(w);
+  for (let x = 0; x < w; x++) { let v = 0; for (const y of ys) v += data[y * w + x]; prof[x] = v / ys.length; }
+  let best = 0, bestScore = -Infinity;
+  for (let ph = 0; ph < DASH; ph++) {
+    let sc = 0;
+    for (let x = 0; x < w; x++) sc += ((x + ph) % DASH < DASH / 2 ? 1 : -1) * prof[x];
+    if (sc > bestScore) { bestScore = sc; best = ph; }
+  }
+  const on = new Uint8Array(w);
+  for (let x = 0; x < w; x++) if ((x + best) % DASH < DASH / 2) for (let d = -1; d <= 1; d++) if (x + d >= 0 && x + d < w) on[x + d] = 1;
+  return on;
+}
+
+// A stroke lying along the dashed line (the top of an h's arch) shows in the
+// gaps but is taken out with the dashes. Where there is ink on both sides of
+// a dash in the same row, the dash is filled in from it.
+function bridgeDashes(f, used, dash, x0, x1) {
+  const { w, h, data } = f;
+  const at = (x, y) => Math.max(...[y - 2, y - 1, y, y + 1, y + 2].filter(v => v >= 0 && v < h).map(v => data[v * w + x]));
+  for (const [y] of used) {
+    for (let a = x0; a < x1; a++) {
+      if (!dash[a] || (a > x0 && dash[a - 1])) continue;
+      let b = a; while (b + 1 < x1 && dash[b + 1]) b++;
+      if (a - 1 < x0 || b + 1 >= x1) { a = b; continue; }
+      const v = Math.min(at(a - 1, y), at(b + 1, y));
+      for (let x = a; x <= b; x++) if (v > data[y * w + x]) data[y * w + x] = v;
+      a = b;
+    }
+  }
+}
+
 function removeGuides(f, label, rowMedian) {
   const { w, h, data } = f;
   const row = mm => Math.round((mm - f.oy) * RES);
@@ -341,6 +412,8 @@ function removeGuides(f, label, rowMedian) {
   guideLines(f).forEach((L, li) => {
     const x0 = L.x0, x1 = L.x1;
     if (x1 - x0 < 3) return;
+    const before = data.slice(), used = [];
+    const dash = L.dashed ? dashColumns(f, L, own[li]) : null;
     for (let y = Math.max(0, L.ya); y <= Math.min(h - 1, L.yb); y++) {
       const yi = y - L.ya;
       let line = own[li][yi];
@@ -353,12 +426,16 @@ function removeGuides(f, label, rowMedian) {
         for (let d = -SHIFT; d <= SHIFT; d++) ref = Math.max(ref, m[yi + d] ?? 0);
         if (line > ref * 1.5 + 0.05) line = ref;
       }
+      used.push([y, line]);
       if (line < 0.03) continue;
       for (let x = x0; x < x1; x++) {
+        if (dash && !dash[x]) continue; // the gaps hold no line, only ink
         const i = y * w + x;
         data[i] = Math.max(0, 1 - (1 - data[i]) / (1 - line));
       }
     }
+    bridge(f, before, used, x0, x1);
+    if (dash) bridgeDashes(f, used, dash, x0, x1);
   });
   // Label (and its hint word) in the top-left of the strip. Its width is an
   // overestimate from the character count, which is plenty: letters rarely reach there.
