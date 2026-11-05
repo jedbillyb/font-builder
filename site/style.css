@@ -1,7 +1,5 @@
 :root { --bg: #fff; --fg: #111; --muted: #666; --line: #bbb; accent-color: #111; color-scheme: light; }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #111; --fg: #eee; --muted: #999; --line: #444; accent-color: #eee; color-scheme: dark; }
-}
+:root[data-theme="dark"] { --bg: #111; --fg: #eee; --muted: #999; --line: #444; accent-color: #eee; color-scheme: dark; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
 main { max-width: 760px; margin: 0 auto; padding: 24px 16px 32px; }
 h1 { font-size: 1.6em; margin: 0 0 6px; }
